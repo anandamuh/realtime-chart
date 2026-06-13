@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Bitcoin Price Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a1a; /* Kita bikin tema dark mode biar keren */
+            color: #ffffff;
+            padding: 20px;
+        }
+        .container {
+            width: 80%;
+            max-width: 700px;
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        h2 { color: #f2a900; } /* Warna khas Bitcoin */
+    </style>
+</head>
+<body>
+
+    <h2>Live Bitcoin (BTC) Price Tracker 🪙</h2>
+    <p>Mengambil data harga asli dari pasar kripto via Fetch API</p>
+
+    <div class="container">
+        <canvas id="grafikBitcoin"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('grafikBitcoin').getContext('2d');
+
+const konfigurasi = {
+    type: 'line', 
+    data: {
+        labels: [], 
+        datasets: [{
+            label: 'Harga Bitcoin Real-Time (Binance Stream)',
+            data: [], 
+            borderColor: '#f2a900', 
+            backgroundColor: 'rgba(242, 169, 0, 0.1)',
+            borderWidth: 2,
+            tension: 0.1 
+        }]
+    },
+    options: {
+        responsive: true,
+        animation: false,
+        scales: {
+            y: {
+                beginAtZero: false 
+            }
+        }
+    }
+};
+
+const grafikBTC = new Chart(ctx, konfigurasi);
+
+// 1. BUKA TELEPON LANGSUNG (WEBSOCKET) KE SERVER BINANCE
+// Ini jalur khusus live stream harga BTC ke USDT
+const alamatBinanceStream = "wss://stream.binance.com:9443/ws/btcusdt@ticker";
+const koneksiBinance = new WebSocket(alamatBinanceStream);
+
+// 2. LOGIKA KETIKA SERVER BINANCE MENGIRIMKAN DATA HARGA BARU
+koneksiBinance.onmessage = function(event) {
+    // Ubah kiriman teks dari Binance menjadi data JSON
+    const dataMentah = JSON.parse(event.data);
+    
+    // Di Binance WebSocket, kode 'c' artinya "Current Close Price" (Harga Detik Ini)
+    const hargaReal = parseFloat(dataMentah.c); 
+    
+    const waktuSekarang = new Date().toLocaleTimeString();
+
+    // Masukkan data asli ke grafik
+    grafikBTC.data.labels.push(waktuSekarang);
+    grafikBTC.data.datasets[0].data.push(hargaReal);
+
+    // Pertahankan hanya 10 data terbaru di layar
+    if (grafikBTC.data.labels.length > 10) {
+        grafikBTC.data.labels.shift();
+        grafikBTC.data.datasets[0].data.shift();
+    }
+
+    // Gambar ulang grafik secara instan
+    grafikBTC.update();
+};
+
+// Jaga-jaga jika koneksi ditolak/error
+koneksiBinance.onerror = function(error) {
+    console.error("Koneksi WebSocket Gagal:", error);
+};
+    </script>
+
+</body>
+</html>
