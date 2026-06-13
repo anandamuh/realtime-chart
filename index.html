@@ -43,12 +43,12 @@ const konfigurasi = {
     data: {
         labels: [], 
         datasets: [{
-            label: 'Harga Bitcoin Real-Time (Binance Stream)',
+            label: 'Harga Bitcoin Real-Time (Binance HTTPS)',
             data: [], 
             borderColor: '#f2a900', 
             backgroundColor: 'rgba(242, 169, 0, 0.1)',
             borderWidth: 2,
-            tension: 0.1 
+            tension: 0.2 
         }]
     },
     options: {
@@ -64,39 +64,39 @@ const konfigurasi = {
 
 const grafikBTC = new Chart(ctx, konfigurasi);
 
-// 1. BUKA TELEPON LANGSUNG (WEBSOCKET) KE SERVER BINANCE
-// Ini jalur khusus live stream harga BTC ke USDT
-const alamatBinanceStream = "wss://stream.binance.com:9443/ws/btcusdt@ticker";
-const koneksiBinance = new WebSocket(alamatBinanceStream);
+// MENGGUNAKAN FETCH HTTPS (Sangat Aman & Didukung Penuh Oleh GitHub Pages)
+async function ambilHargaBitcoinReal() {
+    try {
+        // Tembak API Binance jalur HTTPS resmi
+        const respon = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT');
+        
+        if (!respon.ok) throw new Error("Gagal mengambil data");
 
-// 2. LOGIKA KETIKA SERVER BINANCE MENGIRIMKAN DATA HARGA BARU
-koneksiBinance.onmessage = function(event) {
-    // Ubah kiriman teks dari Binance menjadi data JSON
-    const dataMentah = JSON.parse(event.data);
-    
-    // Di Binance WebSocket, kode 'c' artinya "Current Close Price" (Harga Detik Ini)
-    const hargaReal = parseFloat(dataMentah.c); 
-    
-    const waktuSekarang = new Date().toLocaleTimeString();
+        const data = await respon.json();
+        const hargaReal = parseFloat(data.price); 
+        const waktuSekarang = new Date().toLocaleTimeString();
 
-    // Masukkan data asli ke grafik
-    grafikBTC.data.labels.push(waktuSekarang);
-    grafikBTC.data.datasets[0].data.push(hargaReal);
+        // Masukkan data ke grafik
+        grafikBTC.data.labels.push(waktuSekarang);
+        grafikBTC.data.datasets[0].data.push(hargaReal);
 
-    // Pertahankan hanya 10 data terbaru di layar
-    if (grafikBTC.data.labels.length > 10) {
-        grafikBTC.data.labels.shift();
-        grafikBTC.data.datasets[0].data.shift();
+        // Batasi 10 data terakhir
+        if (grafikBTC.data.labels.length > 10) {
+            grafikBTC.data.labels.shift();
+            grafikBTC.data.datasets[0].data.shift();
+        }
+
+        grafikBTC.update();
+    } catch (error) {
+        console.error("Detektif Error:", error);
     }
+}
 
-    // Gambar ulang grafik secara instan
-    grafikBTC.update();
-};
+// Ambil data real setiap 3 detik sekali
+setInterval(ambilHargaBitcoinReal, 3000);
 
-// Jaga-jaga jika koneksi ditolak/error
-koneksiBinance.onerror = function(error) {
-    console.error("Koneksi WebSocket Gagal:", error);
-};
+// Jalankan sekali di awal
+ambilHargaBitcoinReal();
     </script>
 
 </body>
